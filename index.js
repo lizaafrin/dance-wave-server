@@ -29,12 +29,30 @@ async function run() {
     await client.connect();
 
     const danceCollection = client.db("danceWaveDB").collection("danceClasses");
-    
+    const usersCollection = client.db("danceWaveDB").collection("users");
 
+    // API for all classes
     app.get('/danceclasses', async (req, res) => {
-        const result = await danceCollection.find().toArray();
-        res.send(result);
+      const result = await danceCollection.find().toArray();
+      res.send(result);
     });
+
+    // API's for users
+    app.get('/users', async (req, res) => {
+      const result = await usersCollection.find().toArray();
+      res.send(result);
+    })
+    app.post('/users', async (req, res) => {
+      const user = req.body;
+      console.log(user);
+      const query = { email: user.email }
+      const existingUser = await usersCollection.findOne(query);
+      if (existingUser) {
+        return res.send({ message: 'user already exists' })
+      }
+      const result = await usersCollection.insertOne(user);
+      res.send(result);
+    })
     // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 });
     console.log("Pinged your deployment. You successfully connected to MongoDB!");
@@ -46,9 +64,9 @@ async function run() {
 run().catch(console.dir);
 
 
-app.get('/', (req, res) =>{
-    res.send('Welcome to DanceWave!');
+app.get('/', (req, res) => {
+  res.send('Welcome to DanceWave!');
 });
-app.listen(port, ()=>{
-    console.log(`Welcome to DanceWave on port ${port}`);
+app.listen(port, () => {
+  console.log(`Welcome to DanceWave on port ${port}`);
 })
