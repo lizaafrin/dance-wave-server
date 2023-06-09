@@ -30,7 +30,8 @@ async function run() {
 
     const danceCollection = client.db("danceWaveDB").collection("danceClasses");
     const usersCollection = client.db("danceWaveDB").collection("users");
-
+    const selectedClassCollection = client.db("danceWaveDB").collection("selectedClass");
+    
     // API for all classes
     app.get('/danceclasses', async (req, res) => {
       const result = await danceCollection.find().toArray();
@@ -53,6 +54,20 @@ async function run() {
       const result = await usersCollection.insertOne(user);
       res.send(result);
     })
+     
+    // selected class api
+    app.post('/selectedclass', async(req,res) => {
+      const item = req.body;
+      const query = { name: item.name }
+      const existingClass = await selectedClassCollection.findOne(query);
+      if(existingClass){
+        return res.send({message: 'Class already selected'})
+      }
+      // console.log(item);
+      const result = await selectedClassCollection.insertOne(item);
+      res.send(result);
+    })
+
     // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 });
     console.log("Pinged your deployment. You successfully connected to MongoDB!");
