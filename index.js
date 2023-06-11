@@ -84,6 +84,18 @@ async function run() {
       res.send(result);
     })
 
+    app.get('/users/admin/:email',verifyJWT, async (req, res) => {
+      const email = req.params.email;
+      
+      if(req.decoded.email !== email) {
+        res.send({admin: false})
+      }
+      const query = { email: email}
+      const user = await usersCollection.findOne(query);
+      const result = {admin: user?.role ==='admin'}
+      res.send(result);
+    });
+
     app.patch('/users/admin/:id', async (req, res) => {
       const id = req.params.id;
       const query = { _id: new ObjectId(id) };
@@ -118,15 +130,15 @@ async function run() {
     });
 
     // selected class api
-    app.get('/selectedclass', verifyJWT, async (req, res) => {
+    app.get('/selectedclass', async (req, res) => {
       const email = req.query.email;
       if (!email) {
         res.send([]);
       }
-      const decodedEmail = req.decoded.email;
-      if (email !== decodedEmail) {
-        return res.status(403).send({ error: true, message: 'Forbidden access' })
-      }
+      // const decodedEmail = req.decoded.email;
+      // if (email !== decodedEmail) {
+      //   return res.status(403).send({ error: true, message: 'Forbidden access' })
+      // }
       const query = { email: email };
       const result = await selectedClassCollection.find(query).toArray();
       res.send(result);
@@ -137,20 +149,20 @@ async function run() {
 
     app.post('/selectedclass', async (req, res) => {
       const item = req.body;
-      const query = { email: item.email }
-      const existingUser = await selectedClassCollection.findOne(query);
-      if (existingUser) {
-        const query = { name: item.name }
-        const existingClass = await selectedClassCollection.findOne(query);
-        if (existingClass) {
-          return res.send({ message: 'Class already selected' })
-        }
-        else {
-          const result = await selectedClassCollection.insertOne(item);
-          res.send(result);
-        }
-      }
-      console.log(item);
+      // const query = { email: item.email }
+      // const existingUser = await selectedClassCollection.findOne(query);
+      // if (existingUser) {
+      //   const query = { name: item.name }
+      //   const existingClass = await selectedClassCollection.findOne(query);
+      //   if (existingClass) {
+      //     return res.send({ message: 'Class already selected' })
+      //   }
+      //   else {
+      //     const result = await selectedClassCollection.insertOne(item);
+      //     res.send(result);
+      //   }
+      // }
+      // console.log(item);
       const result = await selectedClassCollection.insertOne(item);
       res.send(result);
     })
