@@ -187,7 +187,7 @@ async function run() {
 
     
     // API's for pending classes
-    app.get('/pendingclasses', async (req, res) => {
+    app.get('/dashboard/pendingclasses', async (req, res) => {
       const result = await pendingClassCollection.find().toArray();
       res.send(result);
     })
@@ -196,7 +196,6 @@ async function run() {
       const email = req.params.email;
       const query = { instructorEmail: email}
       const myPendingClass = await pendingClassCollection.find(query).toArray();
-      console.log(email, query, myPendingClass);
       res.send(myPendingClass);
     });
     // Post pending classes for specific instructor
@@ -211,6 +210,31 @@ async function run() {
       const result = await pendingClassCollection.insertOne(newClass);
       res.send(result);
     })
+
+    // Approve pending class status by administrative
+    app.patch('/dashboard/approvedclasses/:id', async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+      const updateDoc = {
+        $set: {
+          status: 'approved',
+        },
+      };
+      const result = await pendingClassCollection.updateOne(query, updateDoc);
+      res.send(result);
+    });
+    // Deny pending class status by administrative
+    app.patch('/dashboard/deniedclasses/:id', async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+      const updateDoc = {
+        $set: {
+          status: 'denied',
+        },
+      };
+      const result = await pendingClassCollection.updateOne(query, updateDoc);
+      res.send(result);
+    });
 
     // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 });
