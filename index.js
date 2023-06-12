@@ -68,6 +68,42 @@ async function run() {
       res.send(result);
     });
 
+    // app.post('/danceclasses', async (req, res) => {
+    //   const newClass = req.body;
+    //   // const query = { name: newClass.name, instructorName: newClass.instructorName }
+    //   // const existingClass = await pendingClassCollection.findOne(query);
+    //   // if (existingClass) {
+    //   //   return res.send({ message: 'Class already exists' })
+    //   // }
+    //   const result = await danceCollection.insertOne(newClass);
+    //   res.send(result);
+    //   console.log(newClass, result);
+    // })
+    app.put('/danceclasses', async (req, res) => {
+      const newClass = req.body
+      const filter = { instructorEmail: newClass.instructorEmail, status: 'approved'}
+      const options = { upsert: true }
+      const updateDoc = {
+        $set: {
+          _id: newClass._id,
+          name: newClass.name,
+          category: newClass.category,
+          instructorName: newClass.instructorName,
+          availableSeats: newClass.availableSeats,
+          fee: newClass.fee,
+          details: newClass.details,
+          image: newClass.image,
+          status: 'approved',
+          instructorEmail: newClass.instructorEmail,
+          enrolledCount: newClass.enrolledCount,
+          students: []
+        },
+      }
+      const result = await danceCollection.updateOne(filter, updateDoc, options)
+      res.send(result);
+      console.log(newClass, filter, options);
+    })
+
     // API's for users
     app.get('/users', async (req, res) => {
       const result = await usersCollection.find().toArray();
@@ -201,7 +237,7 @@ async function run() {
     // Post pending classes for specific instructor
     app.post('/pendingclasses', async (req, res) => {
       const newClass = req.body;
-      console.log(newClass);
+      // console.log(newClass);
       const query = { name: newClass.name, instructorName: newClass.instructorName }
       const existingClass = await pendingClassCollection.findOne(query);
       if (existingClass) {
