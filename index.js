@@ -51,6 +51,7 @@ async function run() {
     const danceCollection = client.db("danceWaveDB").collection("danceClasses");
     const usersCollection = client.db("danceWaveDB").collection("users");
     const selectedClassCollection = client.db("danceWaveDB").collection("selectedClass");
+    const pendingClassCollection = client.db("danceWaveDB").collection("pendingClass");
 
     // jwt token api
     app.post('/jwt', (req, res) => {
@@ -109,9 +110,9 @@ async function run() {
       res.send(result);
     });
 
-    // app.patch('/users/instructor/:id', async (req, res) => {
-    //   const id = req.params.id;
-    //   const query = { _id: new ObjectId(id) };
+    // app.patch('/users/instructor/:email', async (req, res) => {
+    //   const email = req.params.email;
+    //   const query = { email: email };
     //   const updateDoc = {
     //     $set: {
     //       role: 'instructor', 
@@ -120,7 +121,22 @@ async function run() {
 
     //   const result = await usersCollection.updateOne(query, updateDoc);
     //   res.send(result);
+    //   console.log(result);
     // });
+    
+    app.patch('/users/instructor/:id', async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+      const updateDoc = {
+        $set: {
+          role: 'instructor', 
+        },
+      };
+
+      const result = await usersCollection.updateOne(query, updateDoc);
+      res.send(result);
+      console.log(result);
+    });
 
     app.delete('/users/:id', async (req, res) => {
       const id = req.params.id;
@@ -145,8 +161,6 @@ async function run() {
       // const result = await selectedClassCollection.find().toArray();
       // res.send(result);
     })
-
-
     app.post('/selectedclass', async (req, res) => {
       const item = req.body;
       // const query = { email: item.email }
@@ -172,6 +186,24 @@ async function run() {
       const result = await selectedClassCollection.deleteOne(query);
       res.send(result);
     });
+
+    
+    // API's for pending classes
+    app.get('/pendingclasses', async (req, res) => {
+      const result = await pendingClassCollection.find().toArray();
+      res.send(result);
+    })
+    app.post('/pendingclasses', async (req, res) => {
+      const newClass = req.body;
+      console.log(newClass);
+      const query = { name: newClass.name, instructorName: newClass.instructorName }
+      const existingClass = await pendingClassCollection.findOne(query);
+      if (existingClass) {
+        return res.send({ message: 'Class already exists' })
+      }
+      const result = await pendingClassCollection.insertOne(newClass);
+      res.send(result);
+    })
 
     // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 });
