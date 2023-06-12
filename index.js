@@ -75,7 +75,6 @@ async function run() {
     })
     app.post('/users', async (req, res) => {
       const user = req.body;
-      console.log(user);
       const query = { email: user.email }
       const existingUser = await usersCollection.findOne(query);
       if (existingUser) {
@@ -135,7 +134,6 @@ async function run() {
 
       const result = await usersCollection.updateOne(query, updateDoc);
       res.send(result);
-      console.log(result);
     });
 
     app.delete('/users/:id', async (req, res) => {
@@ -193,6 +191,15 @@ async function run() {
       const result = await pendingClassCollection.find().toArray();
       res.send(result);
     })
+    // Pending classes for specific instructor
+    app.get('/pendingclasses/:email', async (req, res) => {
+      const email = req.params.email;
+      const query = { instructorEmail: email}
+      const myPendingClass = await pendingClassCollection.find(query).toArray();
+      console.log(email, query, myPendingClass);
+      res.send(myPendingClass);
+    });
+    // Post pending classes for specific instructor
     app.post('/pendingclasses', async (req, res) => {
       const newClass = req.body;
       console.log(newClass);
