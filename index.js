@@ -290,15 +290,20 @@ async function run() {
     })
 
     //  payment intent related api
-    //   app.post('/payments', async (req, res) => {
-    //     const payment = req.body;
-    //     const insertResult = await paymentCollection.insertOne(payment);
-
-    //     const query = { _id: { $in: payment.cartItems.map(id => new ObjectId(id)) } }
-    //     const deleteResult = await cartCollection.deleteMany(query);
-
-    //     res.send({ insertResult, deleteResult });
-    // })
+     app.patch('/selectedclasses', async (req, res) => {
+      const paidClass = req.body;
+      const query = { name: paidClass.enrolledClass , instructorEmail: paidClass.instructorEmail
+      };
+      const updateDoc = {
+        $set: {
+          status: 'paid',
+          transactionId: paidClass.transactionId
+        },
+      };
+      const result = await selectedClassCollection.updateOne(query, updateDoc);
+      res.send(result);
+      // console.log(query, result);
+    });
 
     // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 });
