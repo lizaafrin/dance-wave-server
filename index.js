@@ -6,6 +6,8 @@ const jwt = require('jsonwebtoken');
 require('dotenv').config();
 const port = process.env.PORT || 5000;
 
+const stripe = require('stripe')(process.env.PAYMENT_SECRET_KEY)
+
 
 // middleware
 app.use(cors());
@@ -52,6 +54,7 @@ async function run() {
     const usersCollection = client.db("danceWaveDB").collection("users");
     const selectedClassCollection = client.db("danceWaveDB").collection("selectedClass");
     const pendingClassCollection = client.db("danceWaveDB").collection("pendingClass");
+    const paymentCollection = client.db('bistroDB').collection('payments');
 
     // jwt token api
     app.post('/jwt', (req, res) => {
@@ -70,22 +73,21 @@ async function run() {
 
     // app.post('/danceclasses', async (req, res) => {
     //   const newClass = req.body;
-    //   // const query = { name: newClass.name, instructorName: newClass.instructorName }
-    //   // const existingClass = await pendingClassCollection.findOne(query);
-    //   // if (existingClass) {
-    //   //   return res.send({ message: 'Class already exists' })
-    //   // }
+    //   const query = { name: newClass.name, instructorName: newClass.instructorName }
+    //   const existingClass = await pendingClassCollection.findOne(query);
+    //   if (existingClass) {
+    //     return res.send({ message: 'Class already exists' })
+    //   }
     //   const result = await danceCollection.insertOne(newClass);
     //   res.send(result);
     //   console.log(newClass, result);
     // })
     app.put('/danceclasses', async (req, res) => {
       const newClass = req.body
-      const filter = { instructorEmail: newClass.instructorEmail, status: 'approved'}
+      const filter = { name: newClass.name }
       const options = { upsert: true }
       const updateDoc = {
         $set: {
-          _id: newClass._id,
           name: newClass.name,
           category: newClass.category,
           instructorName: newClass.instructorName,
@@ -120,15 +122,15 @@ async function run() {
       res.send(result);
     })
 
-    app.get('/users/admin/:email',verifyJWT, async (req, res) => {
+    app.get('/users/admin/:email', verifyJWT, async (req, res) => {
       const email = req.params.email;
-      
-      if(req.decoded.email !== email) {
-        res.send({admin: false})
+
+      if (req.decoded.email !== email) {
+        res.send({ admin: false })
       }
-      const query = { email: email}
+      const query = { email: email }
       const user = await usersCollection.findOne(query);
-      const result = {admin: user?.role ==='admin'}
+      const result = { admin: user?.role === 'admin' }
       res.send(result);
     });
 
@@ -158,13 +160,13 @@ async function run() {
     //   res.send(result);
     //   console.log(result);
     // });
-    
+
     app.patch('/users/instructor/:id', async (req, res) => {
       const id = req.params.id;
       const query = { _id: new ObjectId(id) };
       const updateDoc = {
         $set: {
-          role: 'instructor', 
+          role: 'instructor',
         },
       };
 
@@ -197,19 +199,19 @@ async function run() {
     })
     app.post('/selectedclass', async (req, res) => {
       const item = req.body;
-      // const query = { email: item.email }
-      // const existingUser = await selectedClassCollection.findOne(query);
-      // if (existingUser) {
-      //   const query = { name: item.name }
-      //   const existingClass = await selectedClassCollection.findOne(query);
-      //   if (existingClass) {
-      //     return res.send({ message: 'Class already selected' })
-      //   }
-      //   else {
-      //     const result = await selectedClassCollection.insertOne(item);
-      //     res.send(result);
-      //   }
-      // }
+      const query = { email: item.email }
+      const existingUser = await selectedClassCollection.findOne(query);
+      if (existingUser) {
+        const query = { name: item.name }
+        const existingClass = await selectedClassCollection.findOne(query);
+        if (existingClass) {
+          return res.send({ message: 'Class already selected' })
+        }
+        else {
+          const result = await selectedClassCollection.insertOne(item);
+          res.send(result);
+        }
+      }
       // console.log(item);
       const result = await selectedClassCollection.insertOne(item);
       res.send(result);
@@ -221,7 +223,7 @@ async function run() {
       res.send(result);
     });
 
-    
+
     // API's for pending classes
     app.get('/dashboard/pendingclasses', async (req, res) => {
       const result = await pendingClassCollection.find().toArray();
@@ -230,7 +232,7 @@ async function run() {
     // Pending classes for specific instructor
     app.get('/pendingclasses/:email', async (req, res) => {
       const email = req.params.email;
-      const query = { instructorEmail: email}
+      const query = { instructorEmail: email }
       const myPendingClass = await pendingClassCollection.find(query).toArray();
       res.send(myPendingClass);
     });
@@ -271,6 +273,32 @@ async function run() {
       const result = await pendingClassCollection.updateOne(query, updateDoc);
       res.send(result);
     });
+
+    // Create Payment intent
+    app.post('/create-payment-intent', async (req, res) => {
+      const { items } = req.body;
+      const amount = parseInt(items * 100);
+      const paymentIntent = await stripe.paymentIntents.create({
+        currency: 'usd',
+        amount: amount,
+        payment_method_types: ['card']
+      })
+
+      res.send({
+        clientSecret: paymentIntent.client_secret,
+      })
+    })
+
+    //  payment intent related api
+    //   app.post('/payments', async (req, res) => {
+    //     const payment = req.body;
+    //     const insertResult = await paymentCollection.insertOne(payment);
+
+    //     const query = { _id: { $in: payment.cartItems.map(id => new ObjectId(id)) } }
+    //     const deleteResult = await cartCollection.deleteMany(query);
+
+    //     res.send({ insertResult, deleteResult });
+    // })
 
     // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 });
