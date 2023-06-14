@@ -13,14 +13,16 @@ const stripe = require('stripe')(process.env.PAYMENT_SECRET_KEY)
 app.use(cors());
 app.use(express.json());
 
+/**--------------Validate jwt token----------**/ 
 const verifyJWT = (req, res, next) => {
   const authorization = req.headers.authorization;
   if (!authorization) {
-    return res.status(401).send({ error: true, message: 'Unauthorized access' });
+    return res
+    .status(401)
+    .send({ error: true, message: 'Unauthorized access' });
   }
   // bearer token
   const token = authorization.split(' ')[1];
-
   jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, (err, decoded) => {
     if (err) {
       res.status(401).send({ error: true, message: 'Unauthorized access' });
@@ -64,47 +66,20 @@ async function run() {
       res.send({ token })
     });
 
+      // ---- verify admin----
+      const verifyAdmin = async (req, res, next) => {
+        const email = req.decoded.email;
+        const query = { email: email };
+        const user = await usersCollection.findOne(query);
+        if (user?.role !== 'admin') {
+            return res.status(403).send({
+                error: true,
+                message: 'Forbidden message'
+            })
+        }
+        next();
+    };
 
-    // API for all classes
-    app.get('/danceclasses', async (req, res) => {
-      const result = await danceCollection.find().toArray();
-      res.send(result);
-    });
-
-    // app.post('/danceclasses', async (req, res) => {
-    //   const newClass = req.body;
-    //   const query = { name: newClass.name, instructorName: newClass.instructorName }
-    //   const existingClass = await pendingClassCollection.findOne(query);
-    //   if (existingClass) {
-    //     return res.send({ message: 'Class already exists' })
-    //   }
-    //   const result = await danceCollection.insertOne(newClass);
-    //   res.send(result);
-    //   console.log(newClass, result);
-    // })
-    app.put('/danceclasses', async (req, res) => {
-      const newClass = req.body
-      const filter = { name: newClass.name }
-      const options = { upsert: true }
-      const updateDoc = {
-        $set: {
-          name: newClass.name,
-          category: newClass.category,
-          instructorName: newClass.instructorName,
-          availableSeats: newClass.availableSeats,
-          fee: newClass.fee,
-          details: newClass.details,
-          image: newClass.image,
-          status: 'approved',
-          instructorEmail: newClass.instructorEmail,
-          enrolledCount: newClass.enrolledCount,
-          students: []
-        },
-      }
-      const result = await danceCollection.updateOne(filter, updateDoc, options)
-      res.send(result);
-      console.log(newClass, filter, options);
-    })
 
     // API's for users
     app.get('/users', async (req, res) => {
@@ -122,7 +97,7 @@ async function run() {
       res.send(result);
     })
 
-    app.get('/users/admin/:email', verifyJWT, async (req, res) => {
+    app.get('/users/admin/:email', verifyJWT, verifyAdmin, async (req, res) => {
       const email = req.params.email;
 
       if (req.decoded.email !== email) {
@@ -181,40 +156,90 @@ async function run() {
       res.send(result);
     });
 
+
+
+    // API for all classes
+    app.get('/danceclasses', async (req, res) => {
+      const result = await danceCollection.find().toArray();
+      res.send(result);
+    });
+
+    // app.post('/danceclasses', async (req, res) => {
+    //   const newClass = req.body;
+    //   const query = { name: newClass.name, instructorName: newClass.instructorName }
+    //   const existingClass = await pendingClassCollection.findOne(query);
+    //   if (existingClass) {
+    //     return res.send({ message: 'Class already exists' })
+    //   }
+    //   const result = await danceCollection.insertOne(newClass);
+    //   res.send(result);
+    //   console.log(newClass, result);
+    // })
+    app.put('/danceclasses', async (req, res) => {
+      const newClass = req.body
+      const filter = { name: newClass.name }
+      const options = { upsert: true }
+      const updateDoc = {
+        $set: {
+          name: newClass.name,
+          category: newClass.category,
+          instructorName: newClass.instructorName,
+          availableSeats: newClass.availableSeats,
+          fee: newClass.fee,
+          details: newClass.details,
+          image: newClass.image,
+          status: 'approved',
+          instructorEmail: newClass.instructorEmail,
+          enrolledCount: newClass.enrolledCount,
+          students: []
+        },
+      }
+      const result = await danceCollection.updateOne(filter, updateDoc, options)
+      res.send(result);
+      console.log(newClass, filter, options);
+    })
+
+
     // selected class api
-    app.get('/selectedclass', async (req, res) => {
+    app.get('/selectedclass',verifyJWT, async (req, res) => {
       const email = req.query.email;
       if (!email) {
         res.send([]);
       }
-      // const decodedEmail = req.decoded.email;
-      // if (email !== decodedEmail) {
-      //   return res.status(403).send({ error: true, message: 'Forbidden access' })
-      // }
+      const decodedEmail = req.decoded?.email;
+      if (email !== decodedEmail) {
+        return res.status(403).send({ error: true, message: 'Forbidden access' })
+      }
       const query = { email: email };
       const result = await selectedClassCollection.find(query).toArray();
       res.send(result);
-      // const result = await selectedClassCollection.find().toArray();
-      // res.send(result);
     })
+
     app.post('/selectedclass', async (req, res) => {
       const item = req.body;
       const query = { email: item.email }
-      const existingUser = await selectedClassCollection.findOne(query);
+      const existingUser = await selectedClassCollection.find(query).toArray();
       if (existingUser) {
         const query = { name: item.name }
-        const existingClass = await selectedClassCollection.findOne(query);
-        if (existingClass) {
+        // const existingClass = await existingUser.findOne(query);
+        const existing = existingUser.find(k => k.name === item.name);
+        if (existing) {
           return res.send({ message: 'Class already selected' })
         }
         else {
           const result = await selectedClassCollection.insertOne(item);
           res.send(result);
         }
+        // console.log(query, existingClass);
       }
-      // console.log(item);
-      const result = await selectedClassCollection.insertOne(item);
-      res.send(result);
+      else {
+        const result = await selectedClassCollection.insertOne(item);
+        res.send(result);
+      }
+      console.log(item);
+      // const result = await selectedClassCollection.insertOne(item);
+      // res.send(result);
+      // console.log(query, existingUser);
     })
     app.delete('/selectedclass/:id', async (req, res) => {
       const id = req.params.id;
