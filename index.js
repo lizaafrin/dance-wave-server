@@ -48,7 +48,7 @@ const client = new MongoClient(uri, {
 async function run() {
   try {
     // Connect the client to the server	(optional starting in v4.7)
-    await client.connect();
+    // await client.connect();
 
 
 
@@ -96,8 +96,38 @@ async function run() {
       const result = await usersCollection.insertOne(user);
       res.send(result);
     })
+    app.get('/users/:email', async (req, res) => {
+      const email = req.params.email;
+      const query = { email: email };
+      const result = await usersCollection.findOne(query)
+      res.send(result);
+      // console.log(result, result.role);
+    })
 
-    app.get('/users/admin/:email', verifyJWT, verifyAdmin, async (req, res) => {
+    app.get('/users/admin/:email',  async (req, res) => {
+      const email = req.params.email;
+
+      if (req.decoded.email !== email) {
+        res.send({ admin: false })
+      }
+      const query = { email: email }
+      const user = await usersCollection.findOne(query);
+      const result = { admin: user?.role === 'admin' }
+      res.send(result);
+    });
+    app.get('/users/admin/:email',  async (req, res) => {
+      const email = req.params.email;
+
+      if (req.decoded.email !== email) {
+        res.send({ admin: false })
+      }
+      const query = { email: email }
+      const user = await usersCollection.findOne(query);
+      const result = { admin: user?.role === 'admin' }
+      res.send(result);
+    });
+
+    app.get('/users/admin/:email',  async (req, res) => {
       const email = req.params.email;
 
       if (req.decoded.email !== email) {
@@ -122,19 +152,7 @@ async function run() {
       res.send(result);
     });
 
-    // app.patch('/users/instructor/:email', async (req, res) => {
-    //   const email = req.params.email;
-    //   const query = { email: email };
-    //   const updateDoc = {
-    //     $set: {
-    //       role: 'instructor', 
-    //     },
-    //   };
-
-    //   const result = await usersCollection.updateOne(query, updateDoc);
-    //   res.send(result);
-    //   console.log(result);
-    // });
+   
 
     app.patch('/users/instructor/:id', async (req, res) => {
       const id = req.params.id;
@@ -164,17 +182,7 @@ async function run() {
       res.send(result);
     });
 
-    // app.post('/danceclasses', async (req, res) => {
-    //   const newClass = req.body;
-    //   const query = { name: newClass.name, instructorName: newClass.instructorName }
-    //   const existingClass = await pendingClassCollection.findOne(query);
-    //   if (existingClass) {
-    //     return res.send({ message: 'Class already exists' })
-    //   }
-    //   const result = await danceCollection.insertOne(newClass);
-    //   res.send(result);
-    //   console.log(newClass, result);
-    // })
+    
     app.put('/danceclasses', async (req, res) => {
       const newClass = req.body
       const filter = { name: newClass.name }
@@ -201,15 +209,15 @@ async function run() {
 
 
     // selected class api
-    app.get('/selectedclass',verifyJWT, async (req, res) => {
+    app.get('/selectedclass', async (req, res) => {
       const email = req.query.email;
       if (!email) {
         res.send([]);
       }
-      const decodedEmail = req.decoded?.email;
-      if (email !== decodedEmail) {
-        return res.status(403).send({ error: true, message: 'Forbidden access' })
-      }
+      // const decodedEmail = req.decoded?.email;
+      // if (email !== decodedEmail) {
+      //   return res.status(403).send({ error: true, message: 'Forbidden access' })
+      // }
       const query = { email: email };
       const result = await selectedClassCollection.find(query).toArray();
       res.send(result);
@@ -327,11 +335,11 @@ async function run() {
       };
       const result = await selectedClassCollection.updateOne(query, updateDoc);
       res.send(result);
-      // console.log(query, result);
+      console.log(query, result);
     });
 
     // Send a ping to confirm a successful connection
-    await client.db("admin").command({ ping: 1 });
+    // await client.db("admin").command({ ping: 1 });
     console.log("Pinged your deployment. You successfully connected to MongoDB!");
   } finally {
     // Ensures that the client will close when you finish/error
